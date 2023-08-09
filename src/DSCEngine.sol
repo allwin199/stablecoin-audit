@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {DecentralizedStableCoin} from "./DecentralizedStableCoin.sol";
+import {IERC20} from "@openzeppelin/contracts/";
 
 /// @title DSCEngine
 /// @author Prince Allwin
@@ -21,7 +22,7 @@ contract DSCEngine is ReentrancyGuard {
     /////////////////////////////////////////////////////////////////////////////*/
 
     mapping(address token => address priceFeed) s_priceFeeds;
-    mapping(address user => mapping(address token => uint256 amount)) s_depositedCollateral;
+    mapping(address user => mapping(address token => uint256 amount)) s_collateralDeposited;
 
     DecentralizedStableCoin private immutable i_dsCoin;
 
@@ -37,6 +38,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__TokenNotAllowed();
     error DSCEngine__TokenAddresses_PriceFeedAddresses_DifferentLength();
     error DSCEngine__DSCoinIs_NotAValidAddress();
+    error DSCEngine__Collateral_DepositingFailed();
 
     /*/////////////////////////////////////////////////////////////////////////////
                                     MODIFIERS
@@ -77,6 +79,7 @@ contract DSCEngine is ReentrancyGuard {
                                 PUBLIC FUNCTIONS
     /////////////////////////////////////////////////////////////////////////////*/
 
+    /// @dev follows CEI
     /// @param tokenCollateralAddress The address of the token to deposit as collateral, token can be either wETH or wBTC
     /// @param amountCollateral The amount of collateral to desposit
     function depositCollateral(address tokenCollateralAddress, uint256 amountCollateral)
@@ -85,8 +88,15 @@ contract DSCEngine is ReentrancyGuard {
         IsAllowedToken(tokenCollateralAddress)
         nonReentrant
     {
-        s_depositedCollateral[msg.sender][tokenCollateralAddress] = amountCollateral;
+        s_collateralDeposited[msg.sender][tokenCollateralAddress] =
+            s_collateralDeposited[msg.sender][tokenCollateralAddress] + amountCollateral;
         emit CollateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
+        /// we have updated our mappings, now we have to get the token from the user using transferFrom()
+        /// user is transferring the token to DSCEngine
+        bool success = IERC20(tokenCollateralAddress).transferFrom(msg.sender, address(this), amountCollateral);
+        if (!success) {
+            revert DSCEngine__Collateral_DepositingFailed();
+        }
     }
 
     function mintDSC() public {}

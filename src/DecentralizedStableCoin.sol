@@ -19,9 +19,8 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
     error DecentralizedStableCoin__ZeroAddress();
 
     /*/////////////////////////////////////////////////////////////////////////////
-                                Functions
+                                MODIFIERS
     /////////////////////////////////////////////////////////////////////////////*/
-    constructor() ERC20("DecentralizedStableCoin", "DSC") {}
 
     modifier ZeroAmount(uint256 amount) {
         if (amount <= 0) {
@@ -30,11 +29,20 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
         _;
     }
 
+    /*/////////////////////////////////////////////////////////////////////////////
+                                FUNCTIONS
+    /////////////////////////////////////////////////////////////////////////////*/
+    constructor() ERC20("DecentralizedStableCoin", "DSC") {}
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                            PUBLIC AND EXTERNAL FUNCTIONS
+    /////////////////////////////////////////////////////////////////////////////*/
+
     /// @param to address of the minter
     /// @param amount amount to be minted
     /// @dev onlyOwner modifier is implemented
     /// @dev returns true, if minting is successful
-    function mint(address to, uint256 amount) public onlyOwner ZeroAmount(amount) returns (bool) {
+    function mint(address to, uint256 amount) external onlyOwner ZeroAmount(amount) returns (bool) {
         if (to == address(0)) {
             revert DecentralizedStableCoin__ZeroAddress();
         }

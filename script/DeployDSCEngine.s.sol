@@ -10,8 +10,9 @@ contract DeployDSCEngine is Script {
     DecentralizedStableCoin dsCoin;
 
     function run() external returns (DSCEngine) {
+        dsCoin = new DecentralizedStableCoin();
         vm.startBroadcast();
-        dscEngine = new DSCEngine();
+        // dscEngine = new DSCEngine();
         vm.stopBroadcast();
         return dscEngine;
     }

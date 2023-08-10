@@ -47,3 +47,30 @@ To calculate the health factor
     // ((collateralAdjustedForThreshold * PRECISION) / totalDSCMinted) = 75e18 / 100e18 = 0.75
     // healthfactor < 1
 ```
+
+Liquidation()
+
+```
+    /// If we do start nearing undercollateralization, we need someone to liquidate positions
+    /// we need someone to call redeem and burn onbehalf of the user
+
+    // If $100 worth of ETH is backing $50 worth of DSC
+    // If the price of ETH tanks to $20
+    // now $20 worth of ETH is backing $50 worth of DSC,
+    // which means this is undercollateralized, we can't let this happen
+    // we need to make sure to liquidate peoples positions before they become undercollateralized
+
+    // If someone is almost undercollateralized, the protoccol will pay to the person whoever liquidates
+    // protocol will incentives someone if they liquidate peoples position
+
+    // If $100 worth of ETH is backing $50 worth of DSC
+    // this person is 200% overcollateralized, which is good.
+    // If ETH price tanks to $99, then this user is undercollateralized
+    // someone has to liquidate this persons position
+    // whoever is calling the liquidate
+    // they will pay the $50 worth of DSC which is the debt amount
+    // since the covered the debt amount, they will be incentivized
+    // they will be give $99 worth of ETH
+    // this user earned $49 worth of ETH, by liquidating someones position
+    function liquidate(uint256 amount) public {}
+```

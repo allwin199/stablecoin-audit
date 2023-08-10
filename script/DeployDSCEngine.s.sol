@@ -31,10 +31,11 @@ contract DeployDSCEngine is Script {
         priceFeedAddresses.push(wethUsdPriceFeed);
         priceFeedAddresses.push(wbtcUsdPriceFeed);
 
-        vm.startBroadcast();
+        vm.startBroadcast(deployerKey);
         dscEngine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsCoin));
         vm.stopBroadcast();
 
+        // dscCoin should be owned by dsEngine
         dsCoin.transferOwnership(address(dscEngine));
 
         return (dscEngine, dsCoin, helperConfig);

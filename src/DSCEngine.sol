@@ -41,6 +41,8 @@ contract DSCEngine is ReentrancyGuard {
     /////////////////////////////////////////////////////////////////////////////*/
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
     event DSCMinted(address indexed user, uint256 indexed amount);
+    event CollateralRedeemed(address indexed user, address indexed token, uint256 indexed amount);
+    event DSCBurned(address indexed user, uint256 indexed amount);
 
     /*/////////////////////////////////////////////////////////////////////////////
                                     CUSTOM ERRORS
@@ -52,6 +54,9 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__Collateral_DepositingFailed();
     error DSCEngine__Minting_Failed();
     error DSCEngine__BreaksHealthFactor(uint256 healthFactor);
+    error DSCEngine__RedeemCollateralAmount_ExceedsBalance();
+    error DSCEngine__RedeemCollateral_TransferFailed();
+    error DSCEngine__DSCBurnAmount_ExceedsBalance();
 
     /*/////////////////////////////////////////////////////////////////////////////
                                     MODIFIERS
@@ -118,13 +123,14 @@ contract DSCEngine is ReentrancyGuard {
     /// @notice user must have more collateral value than the minimum threshold
     function mintDSC(uint256 amountDSCToMint) public moreThanZero(amountDSCToMint) nonReentrant {
         s_dscMinted[msg.sender] = s_dscMinted[msg.sender] + amountDSCToMint;
-        _revertIfHealthFactorIsBroken(msg.sender);
         emit DSCMinted(msg.sender, amountDSCToMint);
+        _revertIfHealthFactorIsBroken(msg.sender);
 
         bool minted = i_dsCoin.mint(address(this), amountDSCToMint);
         if (!minted) {
             revert DSCEngine__Minting_Failed();
         }
+        //
     }
 
     /// @dev follows CEI
@@ -141,11 +147,59 @@ contract DSCEngine is ReentrancyGuard {
         mintDSC(amountDSCToMint);
     }
 
-    function redeemCollateral() public {}
+    // Inorder to redeem collateral
+    // 1. Health factor must be over 1 after collateral pulled
+    /// @param tokenCollateralAddress The collateral address to redeem
+    /// @param amountCollateral The amount of collateral to redeem
+    function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral)
+        public
+        moreThanZero(amountCollateral)
+        isAllowedToken(tokenCollateralAddress)
+        nonReentrant
+    {
+        if (amountCollateral > s_collateralDeposited[msg.sender][tokenCollateralAddress]) {
+            revert DSCEngine__RedeemCollateralAmount_ExceedsBalance();
+        }
+        s_collateralDeposited[msg.sender][tokenCollateralAddress] =
+            s_collateralDeposited[msg.sender][tokenCollateralAddress] - amountCollateral;
+        emit CollateralRedeemed(msg.sender, tokenCollateralAddress, amountCollateral);
 
-    function burnDSC() public {}
+        bool success = IERC20(tokenCollateralAddress).transfer(msg.sender, amountCollateral);
+        if (!success) {
+            revert DSCEngine__RedeemCollateral_TransferFailed();
+        }
 
-    function redeemCollateralAndBurnDSC() public {}
+        _revertIfHealthFactorIsBroken(msg.sender);
+    }
+
+    /// @param amountDSCToBurn The amount of DSC to burn
+    function burnDSC(uint256 amountDSCToBurn) public moreThanZero(amountDSCToBurn) {
+        if (amountDSCToBurn > s_dscMinted[msg.sender]) {
+            revert DSCEngine__DSCBurnAmount_ExceedsBalance();
+        }
+        s_dscMinted[msg.sender] = s_dscMinted[msg.sender] - amountDSCToBurn;
+        emit DSCBurned(msg.sender, amountDSCToBurn);
+
+        i_dsCoin.transferFrom(msg.sender, address(this), amountDSCToBurn);
+        // we are getting the amount from user and bringing it to dscEngine and then burning it
+        i_dsCoin.burn(amountDSCToBurn);
+
+        // since we are burning the debt, it will not hurt the healthfactor.
+    }
+
+    /// @param tokenCollateralAddress The collateral address to redeem
+    /// @param amountCollateral The amount of collateral to redeem
+    /// @param amountDSCToBurn The amount of DSC to burn
+    /// @notice This function burns DSC and redeems underlying collateral in one transaction
+    function redeemCollateralAndBurnDSC(
+        address tokenCollateralAddress,
+        uint256 amountCollateral,
+        uint256 amountDSCToBurn
+    ) external {
+        // we have to burn DSC before redeeming the collateral
+        burnDSC(amountDSCToBurn);
+        redeemCollateral(tokenCollateralAddress, amountCollateral);
+    }
 
     function liquidate() public {}
 

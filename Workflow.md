@@ -18,7 +18,7 @@ To calculate the health factor
     uint256 private constant LIQUIDATION_THRESHOLD = 50; //user should be 200% overcollateralized
     uint256 private constant LIQUIDATION_PRECISION = 100;
 
-    function _healthFactor(address user) private view returns (uint256) {
+    function _calculateHealthFactor(address user) private view returns (uint256) {
         (uint256 totalDSCMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
         uint256 collateralAdjustedForThreshold =
             ((collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION);

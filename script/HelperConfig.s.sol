@@ -22,20 +22,21 @@ contract HelperConfig is Script {
 
     constructor() {
         if (block.chainid == 11155111) {
-            // activeNetworkConfig = sepoliaConfig();
+            activeNetworkConfig = sepoliaConfig();
         } else {
             activeNetworkConfig = anvilConfig();
         }
     }
 
-    function sepoliaConfig() public returns (NetworkConfig memory) {
-        // return NetworkConfig({
-        //     weth: address(wethMock),
-        //     wbtc: address(wbtcMock),
-        //     wethUsdPriceFeed: 0x694AA1769357215DE4FAC081bf1f309aDC325306,
-        //     wbtcUsdPriceFeed: 0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43,
-        //     deployerKey: vm.envUint("PRIVATE_KEY")
-        // });
+    function sepoliaConfig() public view returns (NetworkConfig memory) {
+        NetworkConfig memory config = NetworkConfig({
+            weth: 0xdd13E55209Fd76AfE204dBda4007C227904f0a81,
+            wbtc: 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063,
+            wethUsdPriceFeed: 0x694AA1769357215DE4FAC081bf1f309aDC325306,
+            wbtcUsdPriceFeed: 0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43,
+            deployerKey: vm.envUint("SEPOLIA_PRIVATE_KEY")
+        });
+        return config;
     }
 
     function anvilConfig() public returns (NetworkConfig memory) {
@@ -46,10 +47,10 @@ contract HelperConfig is Script {
         vm.startBroadcast();
 
         ERC20Mock wethMock = new ERC20Mock();
+        ERC20Mock wbtcMock = new ERC20Mock();
+
         MockV3Aggregator ethUsdPriceFeed = new MockV3Aggregator(DECIMALS,
             ETH_USD_PRICE);
-
-        ERC20Mock wbtcMock = new ERC20Mock();
         MockV3Aggregator btcUsdPriceFeed = new MockV3Aggregator(
             DECIMALS,
             BTC_USD_PRICE
@@ -57,12 +58,14 @@ contract HelperConfig is Script {
 
         vm.stopBroadcast();
 
-        return NetworkConfig({
+        NetworkConfig memory config = NetworkConfig({
             weth: address(wethMock),
             wbtc: address(wbtcMock),
             wethUsdPriceFeed: address(ethUsdPriceFeed),
             wbtcUsdPriceFeed: address(btcUsdPriceFeed),
             deployerKey: vm.envUint("PRIVATE_KEY")
         });
+
+        return config;
     }
 }

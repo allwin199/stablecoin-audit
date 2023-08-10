@@ -90,7 +90,7 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     /*/////////////////////////////////////////////////////////////////////////////
-                                PUBLIC FUNCTIONS
+                            PUBLIC & EXTERNAL FUNCTIONS
     /////////////////////////////////////////////////////////////////////////////*/
 
     /// @dev follows CEI
@@ -131,6 +131,7 @@ contract DSCEngine is ReentrancyGuard {
     /// @param tokenCollateralAddress The address of the token to deposit as collateral, token can be either wETH or wBTC
     /// @param amountCollateral The amount of collateral to desposit
     /// @param amountDSCToMint The amount of decentralized stablecoin to mint
+    /// @notice this function will deposit your collateral and mint dsc in one transaction
     function despositCollateralAndMintDSC(
         address tokenCollateralAddress,
         uint256 amountCollateral,
@@ -147,8 +148,6 @@ contract DSCEngine is ReentrancyGuard {
     function redeemCollateralAndBurnDSC() public {}
 
     function liquidate() public {}
-
-    function healthFactor() public {}
 
     /*/////////////////////////////////////////////////////////////////////////////
                             PUBLIC & EXTERNAL VIEW FUNCTIONS

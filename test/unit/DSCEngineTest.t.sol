@@ -227,4 +227,28 @@ contract DSCEngineTest is Test {
 
         vm.stopPrank();
     }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                    DESPOSIT COLLATERAL AND MINT DSC TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+
+    modifier depositedCollateralAndMintedDSC() {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+        dscEngine.despositCollateralAndMintDSC(weth, AMOUNT_COLLATERAL, AMOUNT_DSC_To_Mint);
+        vm.stopPrank();
+        _;
+    }
+
+    function test_UserCan_DepositCollateral_AndMintDSC() public depositedCollateralAndMintedDSC {
+        vm.startPrank(user);
+
+        (uint256 userBalance,) = dscEngine.getAccountInformation(user);
+        uint256 collateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
+
+        vm.stopPrank();
+
+        assertEq(userBalance, AMOUNT_DSC_To_Mint);
+        assertEq(collateralBalance, AMOUNT_COLLATERAL);
+    }
 }

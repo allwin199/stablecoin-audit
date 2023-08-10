@@ -23,6 +23,7 @@ contract DSCEngineTest is Test {
     address public user = address(1);
     uint256 public constant STARTING_user_BALANCE = 10 ether;
     uint256 public constant AMOUNT_COLLATERAL = 10e18;
+    uint256 public constant AMOUNT_DSC_To_Mint = 100e18;
 
     function setUp() public {
         DeployDSCEngine deployer = new DeployDSCEngine();
@@ -35,6 +36,11 @@ contract DSCEngineTest is Test {
         ERC20Mock(weth).mint(user, STARTING_user_BALANCE);
         ERC20Mock(wbtc).mint(user, STARTING_user_BALANCE);
     }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                                    EVENTS
+    /////////////////////////////////////////////////////////////////////////////*/
+    event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
 
     /*/////////////////////////////////////////////////////////////////////////////
                                 CONSTRUCTOR TESTS
@@ -59,6 +65,16 @@ contract DSCEngineTest is Test {
 
         vm.expectRevert(DSCEngine.DSCEngine__DSCoinIs_NotAValidAddress.selector);
         new DSCEngine(tokenAddresses,priceFeedAddresses,address(0));
+    }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                                PRICEFEED TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+    function test_PriceFeed_WorksCorrectly() public {
+        uint256 ethAmount = 15e18;
+        uint256 priceFeedValue = dscEngine.getUsdValue(weth, ethAmount);
+        uint256 expectedValue = 30000e18; // (15e18*2000e18)/1e18 = 30000e18
+        assertEq(priceFeedValue, expectedValue);
     }
 
     /*/////////////////////////////////////////////////////////////////////////////
@@ -90,6 +106,15 @@ contract DSCEngineTest is Test {
     function test_userCan_DepositCollateral_WithoutMinting() public depositedCollateral {
         uint256 userBalance = dsCoin.balanceOf(user);
         assertEq(userBalance, 0);
+    }
+
+    function test_userCan_DepositCollateral_EmitsEvent() public {
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+        vm.expectEmit({emitter: address(dscEngine)});
+        emit CollateralDeposited(user, weth, AMOUNT_COLLATERAL);
+        dscEngine.depositCollateral(weth, AMOUNT_COLLATERAL);
+        vm.stopPrank();
     }
 
     /// @dev this test needs it's own setup
@@ -143,6 +168,23 @@ contract DSCEngineTest is Test {
         vm.expectRevert(DSCEngine.DSCEngine__Collateral_DepositingFailed.selector);
         mockDscEngine.depositCollateral(address(mockDsCoin), AMOUNT_COLLATERAL);
 
+        vm.stopPrank();
+    }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                                MINT DSC TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+    function test_RevertsIf_MintingWith_ZeroAmount() public {
+        vm.startPrank(user);
+        vm.expectRevert(DSCEngine.DSCEngine__ZeroAmount.selector);
+        dscEngine.mintDSC(0);
+        vm.stopPrank();
+    }
+
+    function test_UserCan_MintDSC() public {
+        vm.startPrank(user);
+        vm.expectRevert(DSCEngine.DSCEngine__ZeroAmount.selector);
+        dscEngine.mintDSC(AMOUNT_DSC_To_Mint);
         vm.stopPrank();
     }
 }

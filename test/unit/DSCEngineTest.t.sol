@@ -122,26 +122,26 @@ contract DSCEngineTest is Test {
     // this test needs its own setup
     function test_RevertsIf_TransferFromFails() public {
         // Arrange - Setup
-        MockFailedTransferFrom mockDsc = new MockFailedTransferFrom();
+        MockFailedTransferFrom mockDsCoin = new MockFailedTransferFrom();
 
-        tokenAddresses = [address(mockDsc)];
+        tokenAddresses = [address(mockDsCoin)];
         priceFeedAddresses = [ethUsdPriceFeed];
 
-        DSCEngine mockDsce = new DSCEngine(
+        DSCEngine mockDscEngine = new DSCEngine(
             tokenAddresses,
             priceFeedAddresses,
-            address(mockDsc)
+            address(mockDsCoin)
         );
 
-        mockDsc.mint(user, AMOUNT_COLLATERAL);
+        mockDsCoin.mint(user, AMOUNT_COLLATERAL);
 
         // Arrange - User
         vm.startPrank(user);
 
-        ERC20Mock(address(mockDsc)).approve(address(mockDsce), AMOUNT_COLLATERAL);
+        ERC20Mock(address(mockDsCoin)).approve(address(mockDscEngine), AMOUNT_COLLATERAL);
         // Act / Assert
         vm.expectRevert(DSCEngine.DSCEngine__Collateral_DepositingFailed.selector);
-        mockDsce.depositCollateral(address(mockDsc), AMOUNT_COLLATERAL);
+        mockDscEngine.depositCollateral(address(mockDsCoin), AMOUNT_COLLATERAL);
 
         vm.stopPrank();
     }

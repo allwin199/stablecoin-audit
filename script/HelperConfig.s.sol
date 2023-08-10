@@ -30,12 +30,12 @@ contract HelperConfig is Script {
 
     function sepoliaConfig() public returns (NetworkConfig memory) {
         // return NetworkConfig({
-        //      weth =
-        //  wbtc;
-        //  wethUsdPriceFeed;
-        //  wbtcUsdPriceFeed;
-        //  deployerKey;
-        // })
+        //     weth: address(wethMock),
+        //     wbtc: address(wbtcMock),
+        //     wethUsdPriceFeed: 0x694AA1769357215DE4FAC081bf1f309aDC325306,
+        //     wbtcUsdPriceFeed: 0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43,
+        //     deployerKey: vm.envUint("PRIVATE_KEY")
+        // });
     }
 
     function anvilConfig() public returns (NetworkConfig memory) {

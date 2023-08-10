@@ -22,7 +22,7 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
                                 MODIFIERS
     /////////////////////////////////////////////////////////////////////////////*/
 
-    modifier ZeroAmount(uint256 amount) {
+    modifier moreThanZero(uint256 amount) {
         if (amount <= 0) {
             revert DecentralizedStableCoin__ZeroAmount();
         }
@@ -42,7 +42,7 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
     /// @param amount amount to be minted
     /// @dev onlyOwner modifier is implemented
     /// @dev returns true, if minting is successful
-    function mint(address to, uint256 amount) external onlyOwner ZeroAmount(amount) returns (bool) {
+    function mint(address to, uint256 amount) external onlyOwner moreThanZero(amount) returns (bool) {
         if (to == address(0)) {
             revert DecentralizedStableCoin__ZeroAddress();
         }
@@ -53,7 +53,7 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
     /// @param amount amount to be burned
     /// @dev super.burn() knows it has to burn from msg.sender
     /// @dev onlyOwner modifier is implemented
-    function burn(uint256 amount) public override onlyOwner ZeroAmount(amount) {
+    function burn(uint256 amount) public override onlyOwner moreThanZero(amount) {
         uint256 userDSCbalance = balanceOf(msg.sender);
         if (userDSCbalance < amount) {
             revert DecentralizedStableCoin__BurnAmount_ExceedsBalance();

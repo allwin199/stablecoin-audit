@@ -23,7 +23,7 @@ contract DSCEngineTest is Test {
     uint256 public deployerKey;
 
     address public user = address(1);
-    uint256 public constant STARTING_user_BALANCE = 10 ether;
+    uint256 public constant STARTING_USER_BALANCE = 10 ether;
     uint256 public constant AMOUNT_COLLATERAL = 10e18;
     uint256 public constant AMOUNT_DSC_To_Mint = 100e18;
 
@@ -32,11 +32,11 @@ contract DSCEngineTest is Test {
         (dscEngine, dsCoin, helperConfig) = deployer.run();
         (weth, wbtc, ethUsdPriceFeed, btcUsdPriceFeed, deployerKey) = helperConfig.activeNetworkConfig();
         if (block.chainid == 31337) {
-            vm.deal(user, STARTING_user_BALANCE);
+            vm.deal(user, STARTING_USER_BALANCE);
         }
 
-        ERC20Mock(weth).mint(user, STARTING_user_BALANCE);
-        ERC20Mock(wbtc).mint(user, STARTING_user_BALANCE);
+        ERC20Mock(weth).mint(user, STARTING_USER_BALANCE);
+        ERC20Mock(wbtc).mint(user, STARTING_USER_BALANCE);
     }
 
     /*/////////////////////////////////////////////////////////////////////////////
@@ -72,7 +72,7 @@ contract DSCEngineTest is Test {
     /*/////////////////////////////////////////////////////////////////////////////
                                 PRICEFEED TESTS
     /////////////////////////////////////////////////////////////////////////////*/
-    function test_PriceFeed_WorksCorrectly() public {
+    function test_GetUsdValue() public {
         uint256 ethAmount = 15e18;
         uint256 priceFeedValue = dscEngine.getUsdValue(weth, ethAmount);
         uint256 expectedValue = 30000e18; // (15e18*2000e18)/1e18 = 30000e18

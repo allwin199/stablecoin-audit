@@ -127,7 +127,18 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
-    function despositCollateralAndMintDSC() public {}
+    /// @dev follows CEI
+    /// @param tokenCollateralAddress The address of the token to deposit as collateral, token can be either wETH or wBTC
+    /// @param amountCollateral The amount of collateral to desposit
+    /// @param amountDSCToMint The amount of decentralized stablecoin to mint
+    function despositCollateralAndMintDSC(
+        address tokenCollateralAddress,
+        uint256 amountCollateral,
+        uint256 amountDSCToMint
+    ) external {
+        depositCollateral(tokenCollateralAddress, amountCollateral);
+        mintDSC(amountDSCToMint);
+    }
 
     function redeemCollateral() public {}
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {Script} from "forge-std/Script.sol";
+import {Script, console2} from "forge-std/Script.sol";
 import {DSCEngine} from "../src/DSCEngine.sol";
 import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
@@ -34,6 +34,9 @@ contract DeployDSCEngine is Script {
         vm.startBroadcast();
         dscEngine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsCoin));
         vm.stopBroadcast();
+
+        dsCoin.transferOwnership(address(dscEngine));
+
         return (dscEngine, dsCoin, helperConfig);
     }
 }

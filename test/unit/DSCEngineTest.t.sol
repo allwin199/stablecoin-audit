@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console2} from "forge-std/Test.sol";
 import {DeployDSCEngine} from "../../script/DeployDSCEngine.s.sol";
 import {DSCEngine} from "../../src/DSCEngine.sol";
 import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
-import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
+import {ERC20Mock} from "@openzeppelin/contracts/mocks/ERC20Mock.sol";
 import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
+import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 
 contract DSCEngineTest is Test {
     DSCEngine public dscEngine;
@@ -181,10 +182,26 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
-    function test_UserCan_MintDSC() public {
+    function test_RevertIf_MintDSC_BreaksHealthFactor() public {
+        uint256 collateralAmount = 0;
+        uint256 userHealthFactor = dscEngine.calculateHealthFactor(AMOUNT_DSC_To_Mint, collateralAmount);
+
         vm.startPrank(user);
-        vm.expectRevert(DSCEngine.DSCEngine__ZeroAmount.selector);
+
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__BreaksHealthFactor.selector, userHealthFactor));
         dscEngine.mintDSC(AMOUNT_DSC_To_Mint);
+
+        vm.stopPrank();
+    }
+
+    function test_UserCan_MintDSC() public depositedCollateral {
+        vm.startPrank(user);
+
+        dscEngine.mintDSC(AMOUNT_DSC_To_Mint);
+
+        (uint256 userBalance,) = dscEngine.getAccountInformation(user);
+
+        assertEq(userBalance, AMOUNT_DSC_To_Mint);
         vm.stopPrank();
     }
 }

@@ -8,6 +8,7 @@ import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/ERC20Mock.sol";
 import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
+import {MockFailedMintDSC} from "../mocks/MockFailedMintDSC.sol";
 import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 
 contract DSCEngineTest is Test {
@@ -148,6 +149,7 @@ contract DSCEngineTest is Test {
     // this test needs its own setup
     function test_RevertsIf_TransferFromFails() public {
         // Arrange - Setup
+        // instead of dsCoin, we are creating a mock
         MockFailedTransferFrom mockDsCoin = new MockFailedTransferFrom();
 
         tokenAddresses = [address(mockDsCoin)];
@@ -202,6 +204,27 @@ contract DSCEngineTest is Test {
         (uint256 userBalance,) = dscEngine.getAccountInformation(user);
 
         assertEq(userBalance, AMOUNT_DSC_To_Mint);
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_MintingFailed() public {
+        vm.startPrank(user);
+
+        MockFailedMintDSC mockDsCoin = new MockFailedMintDSC();
+
+        tokenAddresses = [weth];
+        priceFeedAddresses = [ethUsdPriceFeed];
+
+        DSCEngine mockDscEngine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(mockDsCoin));
+        mockDsCoin.transferOwnership(address(mockDscEngine));
+
+        ERC20Mock(weth).approve(address(mockDscEngine), AMOUNT_COLLATERAL);
+
+        mockDscEngine.depositCollateral(weth, AMOUNT_COLLATERAL);
+
+        vm.expectRevert(DSCEngine.DSCEngine__Minting_Failed.selector);
+        mockDscEngine.mintDSC(AMOUNT_DSC_To_Mint);
+
         vm.stopPrank();
     }
 }

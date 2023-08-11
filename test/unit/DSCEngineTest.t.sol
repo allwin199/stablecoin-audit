@@ -342,4 +342,47 @@ contract DSCEngineTest is Test {
         uint256 userBalance = dsCoin.balanceOf(user);
         assertEq(userBalance, 0);
     }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                            REDEEM COLLATERAL & BURN DSC TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+    function test_RevertsIf_ReddemCollateral_AndBurnDSC_WithZeroAmount() public depositedCollateralAndMintedDSC {
+        vm.startPrank(user);
+        dsCoin.approve(address(dscEngine), AMOUNT_DSC_To_Mint);
+        vm.expectRevert(DSCEngine.DSCEngine__ZeroAmount.selector);
+        dscEngine.redeemCollateralAndBurnDSC(weth, 0, AMOUNT_DSC_To_Mint);
+        vm.stopPrank();
+    }
+
+    function test_UserCan_BurnDSCAnd_RedeemCollateral() public depositedCollateralAndMintedDSC {
+        vm.startPrank(user);
+        dsCoin.approve(address(dscEngine), AMOUNT_DSC_To_Mint);
+        dscEngine.redeemCollateralAndBurnDSC(weth, AMOUNT_COLLATERAL, AMOUNT_DSC_To_Mint);
+        vm.stopPrank();
+    }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                                HEALTHFACTOR TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+    function test_ProperlyReports_HealthFactor() public depositedCollateralAndMintedDSC {
+        uint256 userHealthFactor = dscEngine.getHealthFactor(user);
+        assertEq(userHealthFactor, 100e18);
+        // collateral = 10e18
+        // usd value of 10e18 => (10e18*2000e18)/1e18 = 20000e18
+        // (20000 * 50)/100 = 1000000 / 100 = 10000e18
+        // 10000e18/100e18 = 100e18;
+    }
+
+    function test_HealthFactor_CanGo_BelowOne() public depositedCollateralAndMintedDSC {
+        int256 ethUsdUpdatedPrice = 15e8; // 1 ETH = $15
+
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(ethUsdUpdatedPrice);
+
+        uint256 userHealthFactor = dscEngine.getHealthFactor(user);
+        assertEq(userHealthFactor, 0.75e18);
+        // collateral = 10e18
+        // usd value of 10e18 => (10e18*15e18)/1e18 = 150e18
+        // (150 * 50)/100 = 7500 / 100 = 75e18
+        // 75e18/100e18 = 0.75e18;
+    }
 }

@@ -28,13 +28,13 @@ To calculate the health factor
     // since we are multiplying with liquidation threshold, we have to divide by 100
 
     // HealthFactor > 1
-    // collateralValueInUsd = $1000 of ETH
+    // collateralValueInUsd = $2000 of ETH
     // totalDSCMinted = 100 DSC // value in wei => 100e18
-    // collateralValueInUsd * LIQUIDATION_THRESHOLD = 1000 * 50 = 50000
-    // ((collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION) = 50000 / 100 = 500
-    // collateralAdjustedForThreshold = 500
-    // collateralAdjustedForThreshold * PRECISION = 500 * 1e18 = 500e18
-    // ((collateralAdjustedForThreshold * PRECISION) / totalDSCMinted) = 500e18 / 100e18 = 5
+    // collateralValueInUsd * LIQUIDATION_THRESHOLD = $2000 * 50 = $100000
+    // ((collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION) = 100000 / 100 = 1000
+    // collateralAdjustedForThreshold = 1000
+    // collateralAdjustedForThreshold * PRECISION = 1000 * 1e18 = 1000e18
+    // ((collateralAdjustedForThreshold * PRECISION) / totalDSCMinted) = 1000e18 / 100e18 = 10
     // healthfactor > 1
 
     // HealthFactor < 1

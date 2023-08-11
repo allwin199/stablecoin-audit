@@ -135,7 +135,6 @@ contract DSCEngine is ReentrancyGuard {
         if (!minted) {
             revert DSCEngine__Minting_Failed();
         }
-        //
     }
 
     /// @dev follows CEI

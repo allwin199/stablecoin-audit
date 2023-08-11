@@ -27,6 +27,12 @@ contract DSCEngineTest is Test {
     uint256 public constant STARTING_USER_BALANCE = 10 ether;
     uint256 public constant AMOUNT_COLLATERAL = 10e18;
     uint256 public constant AMOUNT_DSC_To_Mint = 100e18;
+    uint256 public constant MIN_HEALTH_FACTOR = 1e18;
+    uint256 public constant LIQUIDATION_THRESHOLD = 50;
+
+    // Liquidation
+    address public liquidator = makeAddr("liquidator");
+    uint256 public constant COLLATERAL_TO_COVER = 20 ether;
 
     function setUp() public {
         DeployDSCEngine deployer = new DeployDSCEngine();
@@ -78,6 +84,13 @@ contract DSCEngineTest is Test {
         uint256 priceFeedValue = dscEngine.getUsdValue(weth, ethAmount);
         uint256 expectedValue = 30000e18; // (15e18*2000e18)/1e18 = 30000e18
         assertEq(priceFeedValue, expectedValue);
+    }
+
+    function test_GetTokenAmount_FromUsd() public {
+        uint256 ethAmount = 15e18;
+        uint256 priceFeedValue = dscEngine.getUsdValue(weth, ethAmount);
+        uint256 expectedValue = dscEngine.getTokenAmountFromUsd(weth, priceFeedValue);
+        assertEq(expectedValue, ethAmount);
     }
 
     /*/////////////////////////////////////////////////////////////////////////////
@@ -384,5 +397,24 @@ contract DSCEngineTest is Test {
         // usd value of 10e18 => (10e18*15e18)/1e18 = 150e18
         // (150 * 50)/100 = 7500 / 100 = 75e18
         // 75e18/100e18 = 0.75e18;
+    }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                                LIQUIDATION TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+    function test_LiquidatorCant_Liquidate_GoodHealthFactor() public depositedCollateralAndMintedDSC {
+        vm.startPrank(liquidator);
+        vm.expectRevert(DSCEngine.DSCEngine__HealthFactorOk.selector);
+        dscEngine.liquidate(weth, user, AMOUNT_DSC_To_Mint);
+        vm.stopPrank();
+    }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                            VIEW & PURE FUNCTIONS TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+
+    function test_GetMinHealthFactor() public {
+        uint256 minHealthFactor = dscEngine.getMinHealthFactor();
+        assertEq(minHealthFactor, MIN_HEALTH_FACTOR);
     }
 }

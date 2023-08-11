@@ -113,6 +113,7 @@ contract DSCEngine is ReentrancyGuard {
     {
         s_collateralDeposited[msg.sender][tokenCollateralAddress] =
             s_collateralDeposited[msg.sender][tokenCollateralAddress] + amountCollateral;
+
         emit CollateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
         /// we have updated our mappings, now we have to get the token from the user using transferFrom()
         /// user is transferring the tokens to DSCEngine
@@ -130,7 +131,7 @@ contract DSCEngine is ReentrancyGuard {
         emit DSCMinted(msg.sender, amountDSCToMint);
         _revertIfHealthFactorIsBroken(msg.sender);
 
-        bool minted = i_dsCoin.mint(address(this), amountDSCToMint);
+        bool minted = i_dsCoin.mint(msg.sender, amountDSCToMint);
         if (!minted) {
             revert DSCEngine__Minting_Failed();
         }

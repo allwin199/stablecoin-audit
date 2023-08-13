@@ -147,9 +147,12 @@ contract DSCEngineTest is Test {
         _;
     }
 
-    function test_UserCan_DepositCollateral() public depositedCollateral {
-        uint256 userCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
-        assertEq(userCollateralBalance, AMOUNT_COLLATERAL);
+    function test_UserCan_DepositCollateral_AndGet_AccountInfo() public depositedCollateral {
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(user);
+        uint256 collateralDeposited = dscEngine.getTokenAmountFromUsd(weth, collateralValueInUsd);
+
+        assertEq(totalDscMinted, 0);
+        assertEq(collateralDeposited, AMOUNT_COLLATERAL);
     }
 
     function test_UserCan_DepositCollateral_EmitsEvent() public {
@@ -189,4 +192,8 @@ contract DSCEngineTest is Test {
 
         vm.stopPrank();
     }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                                    MINT DSC TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
 }

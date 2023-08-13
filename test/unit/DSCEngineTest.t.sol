@@ -474,4 +474,40 @@ contract DSCEngineTest is Test {
         uint256 expectedBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
         assertEq(expectedBalance, 0, "redeemCollateral");
     }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                                HEALTH FACTOR TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+    function test_ProperlyReports_HealthFactor() public despositedCollateralAndMintedDSC {
+        uint256 healthFactor = dscEngine.getHealthFactor(user);
+
+        // collateralValueInUsd = 20000e18
+        // totalDSCMinted = 100e18
+        // uint256 collateralAdjustedForThreshold =
+        // ((collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION);
+        // (20000e18 * 50)/100 = 10000e18
+        // return ((collateralAdjustedForThreshold * PRECISION) / totalDSCMinted);
+        // (10000e18 * 1e18) / 100e18 = 100e18
+
+        assertEq(healthFactor, 100e18, "healthFactor");
+    }
+
+    function test_HealthFactor_CanGo_BelowOne() public despositedCollateralAndMintedDSC {
+        int256 ethUsdUpdatedPrice = 18e8;
+        // previously 1eth was 2000e8, now 18e8
+
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(ethUsdUpdatedPrice);
+
+        // collateralValueInUsd = 180e18
+        // totalDSCMinted = 100e18
+        // uint256 collateralAdjustedForThreshold =
+        // ((collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION);
+        // (180e18 * 50)/100 = 90e18
+        // return ((collateralAdjustedForThreshold * PRECISION) / totalDSCMinted);
+        // (90e18 * 1e18) / 100e18 = 0.9e18
+
+        uint256 healthFactor = dscEngine.getHealthFactor(user);
+
+        assertEq(healthFactor, 0.9e18);
+    }
 }

@@ -136,6 +136,22 @@ contract DSCEngineTest is Test {
         assertEq(userCollateralBalance, AMOUNT_COLLATERAL);
     }
 
+    modifier depositedCollateral() {
+        vm.startPrank(user);
+
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+        dscEngine.depositCollateral(weth, AMOUNT_COLLATERAL);
+
+        vm.stopPrank();
+
+        _;
+    }
+
+    function test_UserCan_DepositCollateral() public depositedCollateral {
+        uint256 userCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
+        assertEq(userCollateralBalance, AMOUNT_COLLATERAL);
+    }
+
     function test_UserCan_DepositCollateral_EmitsEvent() public {
         vm.startPrank(user);
 

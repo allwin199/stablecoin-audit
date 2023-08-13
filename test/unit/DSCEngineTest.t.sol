@@ -421,7 +421,7 @@ contract DSCEngineTest is Test {
 
         uint256 expectedBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
 
-        assertEq(expectedBalance, 0);
+        assertEq(expectedBalance, 0, "redeemCollateral");
     }
 
     function test_UserCan_RedeemCollateral_EmitsEvent() public depositedCollateral {
@@ -454,5 +454,24 @@ contract DSCEngineTest is Test {
         mockDSCEngine.redeemCollateral(address(mockWeth), AMOUNT_COLLATERAL);
 
         vm.stopPrank();
+    }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                            REDEEM COLLATERAL AND BURN DSC TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+    function test_UserCan_RedeemCollateral_BurnDSC_InOneTransaction() public despositedCollateralAndMintedDSC {
+        vm.startPrank(user);
+
+        dsCoin.approve(address(dscEngine), AMOUNT_DSC_To_Mint);
+
+        dscEngine.redeemCollateralAndBurnDSC(weth, AMOUNT_COLLATERAL, AMOUNT_DSC_To_Mint);
+
+        vm.stopPrank();
+
+        uint256 userBalance = dsCoin.balanceOf(user);
+        assertEq(userBalance, 0, "redeemCollateralForDSC");
+
+        uint256 expectedBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
+        assertEq(expectedBalance, 0, "redeemCollateral");
     }
 }

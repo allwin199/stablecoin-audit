@@ -45,6 +45,7 @@ contract DSCEngineTest is Test {
                                     EVENTS
     /////////////////////////////////////////////////////////////////////////////*/
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
+    event DSCMinted(address indexed user, uint256 indexed amount);
 
     /*/////////////////////////////////////////////////////////////////////////////
                                 CONSTRUCTOR TESTS
@@ -196,4 +197,102 @@ contract DSCEngineTest is Test {
     /*/////////////////////////////////////////////////////////////////////////////
                                     MINT DSC TESTS
     /////////////////////////////////////////////////////////////////////////////*/
+    function test_RevertsIf_MintingWith_ZeroAmount() public {
+        vm.startPrank(user);
+
+        vm.expectRevert(DSCEngine.DSCEngine__ZeroAmount.selector);
+        dscEngine.mintDSC(0);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_UserMintDSC_WithoutCollateral() public {
+        vm.startPrank(user);
+
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__BreaksHealthFactor.selector, 0));
+        dscEngine.mintDSC(AMOUNT_DSC_To_Mint);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_UserMintDSC_MoreThanCollateral() public depositedCollateral {
+        vm.startPrank(user);
+
+        vm.expectRevert();
+        dscEngine.mintDSC(AMOUNT_DSC_To_Mint * 10e18);
+
+        // Amount Collateral = 10e18
+        // amountCollaterlInUsd = 20000e18
+        // AMOUNT_DSC_To_Mint = 100e18*10e18 = 1000e36
+        // user should be 200% overcollateralized, but here user is undercollateralized
+        // so it will break the MIN_HEALTH_FACTOR and it will revert
+
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_MintDSC_BreaksHelathFactor() public depositedCollateral {
+        uint256 amountToMint = dscEngine.getUsdValue(weth, AMOUNT_COLLATERAL);
+
+        vm.startPrank(user);
+
+        uint256 healthFactor =
+            dscEngine.calculateHealthFactor(amountToMint, dscEngine.getUsdValue(weth, AMOUNT_COLLATERAL));
+
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__BreaksHealthFactor.selector, healthFactor));
+        dscEngine.mintDSC(amountToMint);
+
+        vm.stopPrank();
+    }
+
+    modifier mintedDSC() {
+        vm.startPrank(user);
+
+        dscEngine.mintDSC(AMOUNT_DSC_To_Mint);
+
+        vm.stopPrank();
+
+        _;
+    }
+
+    function test_UserCan_MintDSC_UpdatesBalance() public depositedCollateral mintedDSC {
+        uint256 expectedBalance = dsCoin.balanceOf(user);
+        assertEq(expectedBalance, AMOUNT_DSC_To_Mint);
+    }
+
+    function test_UserCan_MintDSC_GetAccountInfo() public depositedCollateral mintedDSC {
+        (uint256 totalDscMinted,) = dscEngine.getAccountInformation(user);
+        assertEq(totalDscMinted, AMOUNT_DSC_To_Mint);
+    }
+
+    function test_UserCan_MintDSC_EmitsEvent() public depositedCollateral {
+        vm.startPrank(user);
+
+        vm.expectEmit({emitter: address(dscEngine)});
+        emit DSCMinted(user, AMOUNT_DSC_To_Mint);
+        dscEngine.mintDSC(AMOUNT_DSC_To_Mint);
+
+        vm.stopPrank();
+    }
+
+    // this test needs its own setup
+    function test_RevertsIf_MintDSC_Failed() public {
+        MockFailedMintDSC mockDSCoin = new MockFailedMintDSC();
+
+        tokenAddresses = [weth];
+        priceFeedAddresses = [ethUsdPriceFeed];
+
+        DSCEngine mockDSCEngine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(mockDSCoin));
+
+        mockDSCoin.transferOwnership(address(mockDSCEngine));
+
+        vm.startPrank(user);
+
+        ERC20Mock(weth).approve(address(mockDSCEngine), AMOUNT_COLLATERAL);
+        mockDSCEngine.depositCollateral(weth, AMOUNT_COLLATERAL);
+
+        vm.expectRevert(DSCEngine.DSCEngine__Minting_Failed.selector);
+        mockDSCEngine.mintDSC(AMOUNT_DSC_To_Mint);
+
+        vm.stopPrank();
+    }
 }

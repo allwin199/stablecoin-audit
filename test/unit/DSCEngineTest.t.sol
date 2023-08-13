@@ -94,11 +94,82 @@ contract DSCEngineTest is Test {
     function test_RevertsIf_CollateralAmount_IsZero() public {
         vm.startPrank(user);
 
-        /// @dev user should approve, so that the token can go to the protocol
-        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
-
         vm.expectRevert(DSCEngine.DSCEngine__ZeroAmount.selector);
         dscEngine.depositCollateral(weth, 0);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_CollateralToken_IsNotAllowed() public {
+        ERC20Mock testToken = new ERC20Mock();
+        vm.startPrank(user);
+
+        /// While deploying this contract, we create a weth and wbtc mock and told the contract those are the only two
+        /// accepted tokenAddresses, if we use anyother address, it should revert
+        vm.expectRevert(DSCEngine.DSCEngine__TokenNotAllowed.selector);
+        dscEngine.depositCollateral(address(testToken), AMOUNT_COLLATERAL);
+        vm.stopPrank();
+    }
+
+    function test_UserCan_DepositCollateral_UpdatesBalance() public {
+        vm.startPrank(user);
+
+        /// @dev inside the setup fn, we are minting erc20 token for the user
+        // ERC20Mock(weth).mint(user, STARTING_USER_BALANCE);
+        // now user has some erc20 balance of weth token
+        // when we call the deposit collateral
+        // we have transferFrom fn inside it
+        // IERC20(tokenCollateralAddress).transferFrom(msg.sender, address(this), amountCollateral);
+        // dscEngine will be making the above call
+        // for dscEngine to make the above call, user have to approve that
+
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+
+        // since the user has approved that, address(dscEngine) can spend behalf of the user,
+        // dscEngine can do transferFrom
+
+        dscEngine.depositCollateral(weth, AMOUNT_COLLATERAL);
+
+        vm.stopPrank();
+
+        uint256 userCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
+        assertEq(userCollateralBalance, AMOUNT_COLLATERAL);
+    }
+
+    function test_UserCan_DepositCollateral_EmitsEvent() public {
+        vm.startPrank(user);
+
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+
+        vm.expectEmit({emitter: address(dscEngine)});
+        emit CollateralDeposited(user, weth, AMOUNT_COLLATERAL);
+        dscEngine.depositCollateral(weth, AMOUNT_COLLATERAL);
+
+        vm.stopPrank();
+    }
+
+    /// @dev this fn needs it own setup
+    function test_RevertsIf_CollateralDepositing_Failed() public {
+        // instead of weth, we creating a mockWeth
+        MockFailedTransferFrom mockWeth = new MockFailedTransferFrom();
+
+        tokenAddresses = [address(mockWeth)];
+        priceFeedAddresses = [ethUsdPriceFeed];
+
+        DSCEngine mockDSCEngine = new DSCEngine(tokenAddresses, priceFeedAddresses, address(mockWeth));
+
+        // since it is a new mockWeth, we have to mint some balance for the user
+        ERC20Mock(address(mockWeth)).mint(user, STARTING_USER_BALANCE);
+
+        vm.startPrank(user);
+
+        // this Weth will be transferedFrom, user to dscEngine
+        // this transfer will be performed by dscEngine
+        // so the user has to approve, that dscEngine can spend on behalf of the user
+        ERC20Mock(address(mockWeth)).approve(address(mockDSCEngine), AMOUNT_COLLATERAL);
+
+        vm.expectRevert(DSCEngine.DSCEngine__Collateral_DepositingFailed.selector);
+        mockDSCEngine.depositCollateral(address(mockWeth), AMOUNT_COLLATERAL);
 
         vm.stopPrank();
     }

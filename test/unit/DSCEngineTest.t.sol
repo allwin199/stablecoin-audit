@@ -11,6 +11,7 @@ import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
 import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
 import {MockFailedMintDSC} from "../mocks/MockFailedMintDSC.sol";
 import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
+import {MockMoreDebtDSC} from "../mocks/MockMoreDebtDSC.sol";
 
 contract DSCEngineTest is Test {
     DSCEngine public dscEngine;
@@ -27,6 +28,14 @@ contract DSCEngineTest is Test {
     uint256 public constant STARTING_USER_BALANCE = 10e18;
     uint256 public constant AMOUNT_COLLATERAL = 10e18;
     uint256 public constant AMOUNT_DSC_To_Mint = 100e18;
+    uint256 private constant LIQUIDATION_PRECISION = 100;
+    uint256 private constant LIQUIDATION_BONUS = 10;
+    uint256 private constant MIN_HEALTH_FACTOR = 1e18;
+
+    // Liquidate
+    address public liquidator = makeAddr("liquidator");
+    uint256 public liquidatorBalance = 100e18;
+    uint256 public constant COLLATERAL_TO_COVER = 20e18;
 
     function setUp() public {
         DeployDSCEngine deployer = new DeployDSCEngine();
@@ -508,6 +517,142 @@ contract DSCEngineTest is Test {
 
         uint256 healthFactor = dscEngine.getHealthFactor(user);
 
-        assertEq(healthFactor, 0.9e18);
+        assertEq(healthFactor, 0.9e18, "healthFactor");
+    }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                                LIQUIDATION TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+    function test_RevertsIf_Liquidation_ZeroAmount() public despositedCollateralAndMintedDSC {
+        vm.startPrank(liquidator);
+
+        vm.expectRevert(DSCEngine.DSCEngine__ZeroAmount.selector);
+        dscEngine.liquidate(weth, user, 0);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_Liquidation_WithTokenNotAllowed() public despositedCollateralAndMintedDSC {
+        ERC20Mock testToken = new ERC20Mock();
+
+        vm.startPrank(liquidator);
+
+        vm.expectRevert(DSCEngine.DSCEngine__TokenNotAllowed.selector);
+        dscEngine.liquidate(address(testToken), user, COLLATERAL_TO_COVER);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertsIf_Liquidation_UserHealthFactorOk() public despositedCollateralAndMintedDSC {
+        vm.startPrank(liquidator);
+
+        vm.expectRevert(DSCEngine.DSCEngine__HealthFactorOk.selector);
+        dscEngine.liquidate(weth, user, COLLATERAL_TO_COVER);
+
+        vm.stopPrank();
+    }
+
+    modifier liquidated() {
+        vm.startPrank(user);
+
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+        dscEngine.despositCollateralAndMintDSC(weth, AMOUNT_COLLATERAL, AMOUNT_DSC_To_Mint);
+
+        vm.stopPrank();
+
+        int256 updatedEthValue = 18e8; // 1ETH = $18
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(updatedEthValue);
+
+        ERC20Mock(weth).mint(liquidator, COLLATERAL_TO_COVER);
+
+        vm.startPrank(liquidator);
+
+        ERC20Mock(weth).approve(address(dscEngine), COLLATERAL_TO_COVER);
+        dscEngine.despositCollateralAndMintDSC(weth, COLLATERAL_TO_COVER, AMOUNT_DSC_To_Mint);
+
+        dsCoin.approve(address(dscEngine), AMOUNT_DSC_To_Mint);
+        dscEngine.liquidate(weth, user, AMOUNT_DSC_To_Mint); // we are covering therie whole debt
+
+        vm.stopPrank();
+
+        _;
+    }
+
+    function test_UserHas_NoMoreDebt() public liquidated {
+        (uint256 userDscMinted,) = dscEngine.getAccountInformation(user);
+        assertEq(userDscMinted, 0);
+    }
+
+    function test_Liquidation_PayoutIsCorrect() public liquidated {
+        uint256 liquidatorWethBalance = ERC20Mock(weth).balanceOf(liquidator);
+        uint256 tokenAmountFromDebtCovered = dscEngine.getTokenAmountFromUsd(weth, AMOUNT_DSC_To_Mint);
+        uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
+        uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
+
+        assertEq(liquidatorWethBalance, totalCollateralToRedeem);
+    }
+
+    function test_UserStillHas_SomeETH_AfterLiquidation() public liquidated {
+        uint256 tokenAmountFromDebtCovered = dscEngine.getTokenAmountFromUsd(weth, AMOUNT_DSC_To_Mint);
+        uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
+        uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
+
+        uint256 usdAmountLiquidated = dscEngine.getUsdValue(weth, totalCollateralToRedeem);
+        uint256 expectedUserCollateralValueInUsd =
+            dscEngine.getUsdValue(weth, AMOUNT_COLLATERAL) - (usdAmountLiquidated);
+
+        (, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(user);
+
+        assertEq(collateralValueInUsd, expectedUserCollateralValueInUsd);
+    }
+
+    // this test needs it own setup
+    function test_RevertsIf_HealthFactor_NotImproved() public {
+        // Arrange - Setup
+        MockMoreDebtDSC mockDSCoin = new MockMoreDebtDSC(ethUsdPriceFeed);
+        tokenAddresses = [weth];
+        priceFeedAddresses = [ethUsdPriceFeed];
+        address owner = msg.sender;
+        vm.prank(owner);
+
+        DSCEngine mockDSCEngine = new DSCEngine(
+            tokenAddresses,
+            priceFeedAddresses,
+            address(mockDSCoin)
+        );
+        mockDSCoin.transferOwnership(address(mockDSCEngine));
+
+        // Arrange - User
+        vm.startPrank(user);
+        ERC20Mock(weth).approve(address(mockDSCEngine), AMOUNT_COLLATERAL);
+        mockDSCEngine.despositCollateralAndMintDSC(weth, AMOUNT_COLLATERAL, AMOUNT_DSC_To_Mint);
+        vm.stopPrank();
+
+        // Arrange - Liquidator
+        uint256 collateralToCover = 1 ether;
+        ERC20Mock(weth).mint(liquidator, collateralToCover);
+
+        vm.startPrank(liquidator);
+        ERC20Mock(weth).approve(address(mockDSCEngine), collateralToCover);
+        uint256 debtToCover = 10 ether;
+        mockDSCEngine.despositCollateralAndMintDSC(weth, collateralToCover, AMOUNT_DSC_To_Mint);
+        mockDSCoin.approve(address(mockDSCEngine), debtToCover);
+
+        // Act
+        int256 ethUsdUpdatedPrice = 18e8; // 1 ETH = $18
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(ethUsdUpdatedPrice);
+
+        // Act/Assert
+        vm.expectRevert(DSCEngine.DSCEngine__HealthFactor_NotImproved.selector);
+        mockDSCEngine.liquidate(weth, user, debtToCover);
+        vm.stopPrank();
+    }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                                VIEW & PURE FUNCTION TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+    function testGetMinHealthFactor() public {
+        uint256 minHealthFactor = dscEngine.getMinHealthFactor();
+        assertEq(minHealthFactor, MIN_HEALTH_FACTOR);
     }
 }

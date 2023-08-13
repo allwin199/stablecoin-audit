@@ -79,14 +79,14 @@ contract DSCEngineTest is Test {
         uint256 ethAmount = 15e18;
         uint256 priceFeedValue = dscEngine.getUsdValue(weth, ethAmount);
         uint256 expectedValue = 30000e18; // (15e18*2000e18)/1e18 = 30000e18
-        assertEq(priceFeedValue, expectedValue);
+        assertEq(priceFeedValue, expectedValue, "getUsdValue");
     }
 
     function test_GetTokenAmount_FromUsd() public {
         uint256 ethAmount = 15e18;
         uint256 priceFeedValue = dscEngine.getUsdValue(weth, ethAmount);
         uint256 expectedValue = dscEngine.getTokenAmountFromUsd(weth, priceFeedValue);
-        assertEq(expectedValue, ethAmount);
+        assertEq(expectedValue, ethAmount, "getTokenAmountFromUsd");
     }
 
     /*/////////////////////////////////////////////////////////////////////////////
@@ -134,7 +134,7 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
 
         uint256 userCollateralBalance = dscEngine.getCollateralBalanceOfUser(user, weth);
-        assertEq(userCollateralBalance, AMOUNT_COLLATERAL);
+        assertEq(userCollateralBalance, AMOUNT_COLLATERAL, "despositCollateral");
     }
 
     modifier depositedCollateral() {
@@ -152,8 +152,8 @@ contract DSCEngineTest is Test {
         (uint256 totalDscMinted, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(user);
         uint256 collateralDeposited = dscEngine.getTokenAmountFromUsd(weth, collateralValueInUsd);
 
-        assertEq(totalDscMinted, 0);
-        assertEq(collateralDeposited, AMOUNT_COLLATERAL);
+        assertEq(totalDscMinted, 0, "despositCollateral");
+        assertEq(collateralDeposited, AMOUNT_COLLATERAL, "depositCollateral");
     }
 
     function test_UserCan_DepositCollateral_EmitsEvent() public {
@@ -256,12 +256,12 @@ contract DSCEngineTest is Test {
 
     function test_UserCan_MintDSC_UpdatesBalance() public depositedCollateral mintedDSC {
         uint256 expectedBalance = dsCoin.balanceOf(user);
-        assertEq(expectedBalance, AMOUNT_DSC_To_Mint);
+        assertEq(expectedBalance, AMOUNT_DSC_To_Mint, "mintDSC");
     }
 
     function test_UserCan_MintDSC_GetAccountInfo() public depositedCollateral mintedDSC {
         (uint256 totalDscMinted,) = dscEngine.getAccountInformation(user);
-        assertEq(totalDscMinted, AMOUNT_DSC_To_Mint);
+        assertEq(totalDscMinted, AMOUNT_DSC_To_Mint, "mintDSC");
     }
 
     function test_UserCan_MintDSC_EmitsEvent() public depositedCollateral {
@@ -294,5 +294,33 @@ contract DSCEngineTest is Test {
         mockDSCEngine.mintDSC(AMOUNT_DSC_To_Mint);
 
         vm.stopPrank();
+    }
+
+    /*/////////////////////////////////////////////////////////////////////////////
+                        DEPOSIT COLLATERAL AND MINT DSC TESTS
+    /////////////////////////////////////////////////////////////////////////////*/
+
+    modifier despositedCollateralAndMintedDSC() {
+        vm.startPrank(user);
+
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+        dscEngine.despositCollateralAndMintDSC(weth, AMOUNT_COLLATERAL, AMOUNT_DSC_To_Mint);
+
+        vm.stopPrank();
+
+        _;
+    }
+
+    function test_UserCan_DepositCollateral_AndMintDSC_InOneTransaction() public despositedCollateralAndMintedDSC {
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(user);
+
+        assertEq(totalDscMinted, AMOUNT_DSC_To_Mint, "depositCollateralAndMintDSC");
+        assertEq(collateralValueInUsd, dscEngine.getUsdValue(weth, AMOUNT_COLLATERAL), "depositCollateralAndMintDSC");
+    }
+
+    function test_UserCan_DepositCollateral_AndMintDSC_UpdatesBalance() public despositedCollateralAndMintedDSC {
+        uint256 expectedBalance = dsCoin.balanceOf(user);
+
+        assertEq(expectedBalance, AMOUNT_DSC_To_Mint);
     }
 }

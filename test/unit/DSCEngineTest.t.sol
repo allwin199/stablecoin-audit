@@ -29,8 +29,11 @@ contract DSCEngineTest is Test {
     uint256 public constant AMOUNT_COLLATERAL = 10e18;
     uint256 public constant AMOUNT_DSC_To_Mint = 100e18;
     uint256 private constant LIQUIDATION_PRECISION = 100;
+    uint256 private constant LIQUIDATION_THRESHOLD = 50;
     uint256 private constant LIQUIDATION_BONUS = 10;
     uint256 private constant MIN_HEALTH_FACTOR = 1e18;
+    uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
+    uint256 private constant PRECISION = 1e18;
 
     // Liquidate
     address public liquidator = makeAddr("liquidator");
@@ -651,8 +654,28 @@ contract DSCEngineTest is Test {
     /*/////////////////////////////////////////////////////////////////////////////
                                 VIEW & PURE FUNCTION TESTS
     /////////////////////////////////////////////////////////////////////////////*/
-    function testGetMinHealthFactor() public {
+    function test_GetMinHealthFactor() public {
         uint256 minHealthFactor = dscEngine.getMinHealthFactor();
         assertEq(minHealthFactor, MIN_HEALTH_FACTOR);
+    }
+
+    function test_GetLiquidationThreshold() public {
+        uint256 liquidationThreshold = dscEngine.getLiquidationThreshold();
+        assertEq(liquidationThreshold, LIQUIDATION_THRESHOLD);
+    }
+
+    function test_GetDsc() public {
+        address dscAddress = dscEngine.getDSC();
+        assertEq(dscAddress, address(dsCoin));
+    }
+
+    function test_GetAdditionFeedPrecision() public {
+        uint256 additionalFeedPrecision = dscEngine.getAdditionalFeedPrecision();
+        assertEq(additionalFeedPrecision, ADDITIONAL_FEED_PRECISION);
+    }
+
+    function test_GetPrecision() public {
+        uint256 precision = dscEngine.getPrecision();
+        assertEq(precision, PRECISION);
     }
 }

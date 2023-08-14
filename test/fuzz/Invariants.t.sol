@@ -65,10 +65,17 @@ contract OpenInvariantsTest is StdInvariant, Test {
         console2.log("wethValue", wethValue);
         console2.log("wbtcValue", wbtcValue);
         console2.log("totalSupployOfDSC", totalSupployOfDSC);
-        console2.log("mintCalled", handler.timesMintIsCalled());
 
         assertGe(wethValue + wbtcValue, totalSupployOfDSC);
+    }
+
+    function invariant_gettersShouldNotRevert() public view {
+        dscEngine.getLiquidationThreshold();
+        dscEngine.getAdditionalFeedPrecision();
     }
 }
 
 // for open based testing, keep fail_on_revert as false
+
+// forge inspect DSCEngine methods
+// to get all the methods

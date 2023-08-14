@@ -678,4 +678,10 @@ contract DSCEngineTest is Test {
         uint256 precision = dscEngine.getPrecision();
         assertEq(precision, PRECISION);
     }
+
+    function test_GetAccountCollateralValue() public depositedCollateral {
+        uint256 collateralValue = dscEngine.getAccountCollateralValue(user);
+        uint256 expectedCollateralValue = dscEngine.getUsdValue(weth, AMOUNT_COLLATERAL);
+        assertEq(collateralValue, expectedCollateralValue, "accountCollateralValue");
+    }
 }

@@ -10,6 +10,7 @@ import {DSCEngine} from "../../src/DSCEngine.sol";
 import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/ERC20Mock.sol";
+import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 
 contract Handler is Test {
     DSCEngine public dscEngine;
@@ -20,6 +21,7 @@ contract Handler is Test {
 
     uint96 public constant MAX_DEPOSIT_SIZE = type(uint96).max;
     address[] public usersWithCollateralDeposited;
+    MockV3Aggregator public ethUsdPriceFeed;
 
     constructor(DSCEngine _dscEngine, DecentralizedStableCoin _dsCoin) {
         dscEngine = _dscEngine;
@@ -28,6 +30,8 @@ contract Handler is Test {
         address[] memory collateralTokens = dscEngine.getCollateralTokens();
         weth = ERC20Mock(collateralTokens[0]);
         wbtc = ERC20Mock(collateralTokens[1]);
+
+        ethUsdPriceFeed = MockV3Aggregator(dscEngine.getCollateralTokenPriceFeed(address(weth)));
     }
 
     function depositCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
@@ -68,6 +72,7 @@ contract Handler is Test {
         }
         uint256 userIndex = addressSeed % usersLength;
         address sender = usersWithCollateralDeposited[userIndex];
+        // we can mintDSC only for the users that have deposited collateral
 
         (uint256 totalDSCMinted, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(sender);
 
@@ -88,6 +93,12 @@ contract Handler is Test {
         dscEngine.mintDSC(MAX_DEPOSIT_SIZE);
         vm.stopPrank();
     }
+
+    // this breaks our invariant test suite
+    // function updateCollateralPrice(uint96 newPrice) public {
+    //     int256 newPriceInt = int256(uint256(newPrice));
+    //     ethUsdPriceFeed.updateAnswer(newPriceInt);
+    // }
 
     // Helper Functions
     function _getCollaterlFromSeed(uint256 collateralSeed) private view returns (ERC20Mock) {

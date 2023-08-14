@@ -8,7 +8,7 @@ pragma solidity ^0.8.18;
 // 1. The total supply of DSC should be less than the total value of collateral
 // 2. Getter view functions should never revert
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console2} from "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
 
 import {Handler} from "./Handler.t.sol";
@@ -28,6 +28,7 @@ contract OpenInvariantsTest is StdInvariant, Test {
     address public ethUsdPriceFeed;
     address public btcUsdPriceFeed;
     uint256 public deployerKey;
+    Handler handler;
 
     address public user = address(1);
     uint256 public constant STARTING_USER_BALANCE = 10e18;
@@ -45,7 +46,7 @@ contract OpenInvariantsTest is StdInvariant, Test {
         // if we say target contract as dscEngine, then fuzz will call the functions randomly
         // for eg, redeemCollateral can be called before depositCollateral
         // so address this, we have to create a handler
-        Handler handler = new Handler(dscEngine, dsCoin);
+        handler = new Handler(dscEngine, dsCoin);
 
         targetContract(address(handler));
     }
@@ -60,6 +61,11 @@ contract OpenInvariantsTest is StdInvariant, Test {
 
         uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
         uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
+
+        console2.log("wethValue", wethValue);
+        console2.log("wbtcValue", wbtcValue);
+        console2.log("totalSupployOfDSC", totalSupployOfDSC);
+        console2.log("mintCalled", handler.timesMintIsCalled());
 
         assertGe(wethValue + wbtcValue, totalSupployOfDSC);
     }

@@ -684,4 +684,9 @@ contract DSCEngineTest is Test {
         uint256 expectedCollateralValue = dscEngine.getUsdValue(weth, AMOUNT_COLLATERAL);
         assertEq(collateralValue, expectedCollateralValue, "accountCollateralValue");
     }
+
+    function test_GetCollateralTokens() public {
+        address[] memory collateralTokens = dscEngine.getCollateralTokens();
+        assertEq(collateralTokens[0], weth);
+    }
 }

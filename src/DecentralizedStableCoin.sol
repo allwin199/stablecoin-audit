@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity 0.8.18;
 // @audit floating pragma
 
 import {console2} from "forge-std/console2.sol";

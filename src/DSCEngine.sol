@@ -72,6 +72,7 @@ contract DSCEngine is ReentrancyGuard {
                                     MODIFIERS
     /////////////////////////////////////////////////////////////////////////////*/
     modifier moreThanZero(uint256 amount) {
+        // @audit != can be used
         if (amount <= 0) {
             revert DSCEngine__ZeroAmount();
         }
@@ -256,6 +257,7 @@ contract DSCEngine is ReentrancyGuard {
         // loop through each collateral token, get the amount they have deosited, and map it to the price to get the USD value
 
         uint256 totalCollateralValueInUsd = 0;
+        // @audit collateralTokensLength can be cached
         for (uint256 index = 0; index < s_collateralTokens.length; index++) {
             address token = s_collateralTokens[index];
             uint256 amount = s_collateralDeposited[user][token];

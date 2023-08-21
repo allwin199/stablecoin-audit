@@ -25,6 +25,7 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
     /////////////////////////////////////////////////////////////////////////////*/
 
     modifier moreThanZero(uint256 amount) {
+        // @audit != can be used
         if (amount <= 0) {
             revert DecentralizedStableCoin__ZeroAmount();
         }

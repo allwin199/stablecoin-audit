@@ -97,6 +97,8 @@ contract DSCEngine is ReentrancyGuard {
         if (dsCoinAddress == address(0)) {
             revert DSCEngine__DSCoinIs_NotAValidAddress();
         }
+        // @audit unchecked can be used
+        // @audit variable initialized
         for (uint256 index = 0; index < tokenAddresses.length; index++) {
             s_priceFeeds[tokenAddresses[index]] = priceFeedAddresses[index];
             s_collateralTokens.push(tokenAddresses[index]);
@@ -257,7 +259,9 @@ contract DSCEngine is ReentrancyGuard {
         // loop through each collateral token, get the amount they have deosited, and map it to the price to get the USD value
 
         uint256 totalCollateralValueInUsd = 0;
+        // @audit variable initialized
         // @audit collateralTokensLength can be cached
+        // @audit unchecked can be used
         for (uint256 index = 0; index < s_collateralTokens.length; index++) {
             address token = s_collateralTokens[index];
             uint256 amount = s_collateralDeposited[user][token];

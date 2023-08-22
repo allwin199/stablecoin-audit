@@ -27,6 +27,7 @@ contract DSCEngine is ReentrancyGuard {
     /////////////////////////////////////////////////////////////////////////////*/
 
     mapping(address token => address priceFeed) private s_priceFeeds;
+    //@audit-issue for eth it will be amount * 1e18, for btc it will be amount * 1e8, how can we exploit
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
     mapping(address user => uint256 amountDSCMinted) private s_dscMinted;
     address[] private s_collateralTokens;
@@ -105,7 +106,7 @@ contract DSCEngine is ReentrancyGuard {
             s_priceFeeds[tokenAddresses[index]] = priceFeedAddresses[index];
             s_collateralTokens.push(tokenAddresses[index]);
         }
-
+        // @audit-issue no address 0 check, if 0 address is given it cannot be changed later
         i_dsCoin = DecentralizedStableCoin(dsCoinAddress);
     }
 
@@ -128,6 +129,9 @@ contract DSCEngine is ReentrancyGuard {
         emit CollateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
         /// we have updated our mappings, now we have to get the token from the user using transferFrom()
         /// user is transferring the tokens to DSCEngine
+        // @audit-issue USDT will fail, because USDT will not return anything, so it should be accounted or it will revert
+        // @audit-info use safeTransferLib
+        // use safetransferfrom instead of transferFrom
         bool success = IERC20(tokenCollateralAddress).transferFrom(msg.sender, address(this), amountCollateral);
         if (!success) {
             revert DSCEngine__Collateral_DepositingFailed();
